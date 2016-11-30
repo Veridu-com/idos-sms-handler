@@ -1,0 +1,169 @@
+<?php
+/*
+ * Copyright (c) 2012-2016 Veridu Ltd <https://veridu.com>
+ * All rights reserved.
+ */
+
+declare(strict_types = 1);
+
+namespace Cli\Command;
+
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger as Monolog;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+/**
+ * Command definition for SMS Daemon.
+ */
+class Daemon extends Command {
+    /**
+     * Command configuration.
+     *
+     * @return void
+     */
+    protected function configure() {
+        $this
+            ->setName('sms:daemon')
+            ->setDescription('idOS SMS - Daemon')
+            ->addOption(
+                'devMode',
+                'd',
+                InputOption::VALUE_NONE,
+                'Development mode'
+            )
+            ->addOption(
+                'logFile',
+                'l',
+                InputOption::VALUE_REQUIRED,
+                'Path to log file'
+            )
+            ->addArgument(
+                'functionName',
+                InputArgument::REQUIRED,
+                'Gearman Worker Function name'
+            )
+            ->addArgument(
+                'serverList',
+                InputArgument::REQUIRED | InputArgument::IS_ARRAY,
+                'Gearman server host list (separate values by space)'
+            );
+    }
+
+    /**
+     * Command execution.
+     *
+     * @param \Symfony\Component\Console\Input\InputInterface   $input
+     * @param \Symfony\Component\Console\Output\OutputInterface $outpput
+     *
+     * @return void
+     */
+    protected function execute(InputInterface $input, OutputInterface $output) {
+        $logFile = $input->getOption('logFile') ?? 'php://stdout';
+        $logger  = new Monolog('SMS');
+        $logger->pushHandler(new StreamHandler($logFile, Monolog::DEBUG));
+
+        $logger->debug('Initializing idOS SMS Handler Daemon');
+
+        // Development mode
+        $devMode = ! empty($input->getOption('devMode'));
+        if ($devMode) {
+            $logger->debug('Running in developer mode');
+            ini_set('display_errors', 'On');
+            error_reporting(-1);
+        }
+
+        // Gearman Worker function name setup
+        $functionName = $input->getArgument('functionName');
+        if ((empty($functionName)) || (! preg_match('/^[a-zA-Z0-9\._-]+$/', $functionName))) {
+            $functionName = 'idos-sms';
+        }
+
+        // Server List setup
+        $servers = $input->getArgument('serverList');
+
+        $gearman = new \GearmanWorker();
+        foreach ($servers as $server) {
+            if (strpos($server, ':') === false) {
+                $logger->debug(sprintf('Adding Gearman Server: %s', $server));
+                $gearman->addServer($server);
+            } else {
+                $server    = explode(':', $server);
+                $server[1] = intval($server[1]);
+                $logger->debug(sprintf('Adding Gearman Server: %s:%d', $server[0], $server[1]));
+                $gearman->addServer($server[0], $server[1]);
+            }
+        }
+
+        // Run the worker in non-blocking mode
+        $gearman->addOptions(\GEARMAN_WORKER_NON_BLOCKING);
+
+        // 1 second I/O timeout
+        $gearman->setTimeout(1000);
+
+        $logger->debug('Registering Worker Function', ['function' => $functionName]);
+
+        /*
+         * Payload content:
+         * FIXME: Add payload
+         */
+        $gearman->addFunction(
+            $functionName,
+            function (\GearmanJob $job) use ($logger) {
+                $logger->info('SMS job added');
+                $jobData = json_decode($job->workload(), true);
+                if ($jobData === null) {
+                    $logger->warning('Invalid Job Workload!');
+                    $job->sendComplete('invalid');
+
+                    return;
+                }
+
+                $init = microtime(true);
+
+                // FIXME to be implemented!
+
+                $logger->info('Job completed', ['time' => microtime(true) - $init]);
+                $job->sendComplete('ok');
+            }
+        );
+
+        $logger->debug('Entering Gearman Worker Loop');
+
+        // Gearman's Loop
+        while ($gearman->work()
+                || ($gearman->returnCode() == \GEARMAN_IO_WAIT)
+                || ($gearman->returnCode() == \GEARMAN_NO_JOBS)
+                || ($gearman->returnCode() == \GEARMAN_TIMEOUT)
+        ) {
+            if ($gearman->returnCode() == \GEARMAN_SUCCESS) {
+                continue;
+            }
+
+            if (! @$gearman->wait()) {
+                if ($gearman->returnCode() == \GEARMAN_NO_ACTIVE_FDS) {
+                    // No server connection, sleep before reconnect
+                    $logger->debug('No active server, sleep before retry');
+                    sleep(5);
+                    continue;
+                }
+
+                if ($gearman->returnCode() == \GEARMAN_TIMEOUT) {
+                    // Job wait timeout, sleep before retry
+                    sleep(1);
+                    if (! @$gearman->echo('ping')) {
+                        $logger->debug('Invalid server state, restart');
+                        exit;
+                    }
+
+                    continue;
+                }
+            }
+        }
+
+        $logger->debug('Leaving Gearman Worker Loop');
+    }
+}
