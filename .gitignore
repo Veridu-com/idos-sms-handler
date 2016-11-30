@@ -1,0 +1,7 @@
+*.DS_Store
+*.log
+*.sublime-*
+.php_cs
+composer.lock
+vendor/
+VeriduRuleset.xml
