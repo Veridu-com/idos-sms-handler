@@ -10,6 +10,8 @@ namespace Cli\Command;
 
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger as Monolog;
+use Monolog\Processor\ProcessIdProcessor;
+use Monolog\Processor\UidProcessor;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -64,7 +66,10 @@ class Daemon extends Command {
     protected function execute(InputInterface $input, OutputInterface $output) {
         $logFile = $input->getOption('logFile') ?? 'php://stdout';
         $logger  = new Monolog('SMS');
-        $logger->pushHandler(new StreamHandler($logFile, Monolog::DEBUG));
+        $logger
+            ->pushProcessor(new ProcessIdProcessor())
+            ->pushProcessor(new UidProcessor())
+            ->pushHandler(new StreamHandler($logFile, Monolog::DEBUG));
 
         $logger->debug('Initializing idOS SMS Handler Daemon');
 
