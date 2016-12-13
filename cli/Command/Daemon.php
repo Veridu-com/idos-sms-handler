@@ -73,6 +73,8 @@ class Daemon extends Command {
 
         $logger->debug('Initializing idOS SMS Handler Daemon');
 
+        $bootTime = time();
+
         // Development mode
         $devMode = ! empty($input->getOption('devMode'));
         if ($devMode) {
@@ -111,13 +113,16 @@ class Daemon extends Command {
 
         $logger->debug('Registering Worker Function', ['function' => $functionName]);
 
+        $jobCount = 0;
+        $lastJob  = 0;
+
         /*
          * Payload content:
          * FIXME: Add payload
          */
         $gearman->addFunction(
             $functionName,
-            function (\GearmanJob $job) use ($logger) {
+            function (\GearmanJob $job) use ($logger, $devMode, &$jobCount, &$lastJob) {
                 $logger->info('SMS job added');
                 $jobData = json_decode($job->workload(), true);
                 if ($jobData === null) {
@@ -127,7 +132,9 @@ class Daemon extends Command {
                     return;
                 }
 
-                $init = microtime(true);
+                $jobCount++;
+                $lastJob = time();
+                $init    = microtime(true);
 
                 // FIXME to be implemented!
 
@@ -160,7 +167,18 @@ class Daemon extends Command {
                     // Job wait timeout, sleep before retry
                     sleep(1);
                     if (! @$gearman->echo('ping')) {
-                        $logger->debug('Invalid server state, restart');
+                        $logger->debug('Invalid server state, restarting');
+                        exit;
+                    }
+
+                    if (((time() - $bootTime) > 10) && ((time() - $lastJob) > 10)) {
+                        $logger->info(
+                            'Inactivity detected, restarting',
+                            [
+                                'runtime' => time() - $bootTime,
+                                'jobs' => $jobCount
+                            ]
+                        );
                         exit;
                     }
 
@@ -169,6 +187,6 @@ class Daemon extends Command {
             }
         }
 
-        $logger->debug('Leaving Gearman Worker Loop');
+        $logger->debug('Leaving Gearman Worker Loop', ['runtime' => time() - $bootTime, 'jobs' => $jobCount]);
     }
 }
