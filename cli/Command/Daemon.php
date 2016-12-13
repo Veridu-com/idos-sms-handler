@@ -133,13 +133,13 @@ class Daemon extends Command {
                 }
 
                 $jobCount++;
-                $lastJob = time();
-                $init    = microtime(true);
+                $init = microtime(true);
 
                 // FIXME to be implemented!
 
                 $logger->info('Job completed', ['time' => microtime(true) - $init]);
                 $job->sendComplete('ok');
+                $lastJob = time();
             }
         );
 
