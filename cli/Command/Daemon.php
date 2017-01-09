@@ -8,11 +8,11 @@ declare(strict_types = 1);
 
 namespace Cli\Command;
 
+use Cli\Utils;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger as Monolog;
 use Monolog\Processor\ProcessIdProcessor;
 use Monolog\Processor\UidProcessor;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,7 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Command definition for SMS Daemon.
  */
-class Daemon extends Command {
+class Daemon extends AbstractCommand {
     /**
      * Command configuration.
      *
@@ -86,7 +86,7 @@ class Daemon extends Command {
         // Gearman Worker function name setup
         $functionName = $input->getArgument('functionName');
         if ((empty($functionName)) || (! preg_match('/^[a-zA-Z0-9\._-]+$/', $functionName))) {
-            $functionName = 'idos-sms';
+            $functionName = 'sms';
         }
 
         // Server List setup
@@ -115,6 +115,7 @@ class Daemon extends Command {
 
         $jobCount = 0;
         $lastJob  = 0;
+        $sms = new Utils\Sms($this->config['sms']);
 
         /*
          * Payload content:
@@ -122,7 +123,7 @@ class Daemon extends Command {
          */
         $gearman->addFunction(
             $functionName,
-            function (\GearmanJob $job) use ($logger, $devMode, &$jobCount, &$lastJob) {
+            function (\GearmanJob $job) use ($sms, $logger, $devMode, &$jobCount, &$lastJob) {
                 $logger->info('SMS job added');
                 $jobData = json_decode($job->workload(), true);
                 if ($jobData === null) {
@@ -135,7 +136,19 @@ class Daemon extends Command {
                 $jobCount++;
                 $init = microtime(true);
 
-                // FIXME to be implemented!
+                switch($jobData['template']) {
+                    case 'otp':
+                        $message = 'Your verification code is ' . $jobData['variables']['password'];
+                        break;
+
+                    default:
+                        $logger->warning('Invalid Job Workload!');
+                        $job->sendComplete('invalid');
+
+                        return;
+                }
+
+                $sms->send($jobData['phone'], $message);
 
                 $logger->info('Job completed', ['time' => microtime(true) - $init]);
                 $job->sendComplete('ok');
