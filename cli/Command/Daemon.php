@@ -126,7 +126,7 @@ class Daemon extends AbstractCommand {
             function (\GearmanJob $job) use ($sms, $logger, $devMode, &$jobCount, &$lastJob) {
                 $logger->info('SMS job added');
                 $jobData = json_decode($job->workload(), true);
-                if ($jobData === null) {
+                if ($jobData === null || ! isset($jobData['template'])) {
                     $logger->warning('Invalid Job Workload!');
                     $job->sendComplete('invalid');
 
