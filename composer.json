@@ -19,7 +19,8 @@
     "require": {
         "monolog/monolog": "^1.13",
         "symfony/console": "^3.1",
-        "vlucas/phpdotenv": "^2.4"
+        "vlucas/phpdotenv": "^2.4",
+        "guzzlehttp/guzzle": "^6.0"
     },
     "require-dev": {
         "ext-xsl": "*",
