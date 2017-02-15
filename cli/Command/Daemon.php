@@ -19,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Command definition for SMS Daemon.
+ * Command definition for the SMS Daemon.
  */
 class Daemon extends AbstractCommand {
     /**
@@ -56,7 +56,7 @@ class Daemon extends AbstractCommand {
     }
 
     /**
-     * Command execution.
+     * Command execution. This method will start the daemon.
      *
      * @param \Symfony\Component\Console\Input\InputInterface   $input
      * @param \Symfony\Component\Console\Output\OutputInterface $outpput
