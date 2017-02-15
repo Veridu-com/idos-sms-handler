@@ -2,6 +2,7 @@
 *.log
 *.sublime-*
 .php_cs
+.vscode
 composer.lock
 vendor/
 VeriduRuleset.xml
