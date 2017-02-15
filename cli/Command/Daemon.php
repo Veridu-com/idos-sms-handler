@@ -115,7 +115,7 @@ class Daemon extends AbstractCommand {
 
         $jobCount = 0;
         $lastJob  = 0;
-        $sms = new Utils\Sms($this->config['sms']);
+        $sms      = new Utils\Sms($this->config['sms']);
 
         /*
          * Payload content:
@@ -189,7 +189,7 @@ class Daemon extends AbstractCommand {
                             'Inactivity detected, restarting',
                             [
                                 'runtime' => time() - $bootTime,
-                                'jobs' => $jobCount
+                                'jobs'    => $jobCount
                             ]
                         );
                         exit;

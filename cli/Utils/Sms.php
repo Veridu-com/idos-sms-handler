@@ -24,7 +24,7 @@ class Sms {
     /**
      * Return the error message given the error code.
      *
-     * @param mixed  $code
+     * @param mixed $code
      *
      * @return string
      */
@@ -180,7 +180,7 @@ class Sms {
     /**
      * Check if the response has a valid format and has no error.
      *
-     * @param mixed  $response
+     * @param mixed $response
      *
      * @return bool
      */
@@ -215,19 +215,20 @@ class Sms {
         try {
             $response = \Requests::post(
                 $this->endpoint,
-                array(),
-                array(
+                [],
+                [
                     'username' => $this->username,
                     'password' => md5($this->password),
-                    'to' => $number,
-                    'from' => 'Veridu',
-                    'fast' => 1,
-                    'message' => $msg
-                )
+                    'to'       => $number,
+                    'from'     => 'Veridu',
+                    'fast'     => 1,
+                    'message'  => $msg
+                ]
             );
             if ($response->status_code != 200) {
                 $this->log->alert("Failed to send sms to {$number}: HTTP Status {$response->status_code}");
                 $this->lastError = 'Failed to contact SMS Gateway';
+
                 return false;
             }
             if ($this->checkResponse($response->body))
@@ -237,14 +238,15 @@ class Sms {
             $this->log->alert("Failed to send sms to {$number}: " . $e->getMessage());
             $this->lastError = 'Failed to contact SMS Gateway';
         }
+
         return false;
     }
 
     /**
      * Send the SMS message.
      *
-     * @param mixed    $number
-     * @param mixed    $msg
+     * @param mixed $number
+     * @param mixed $msg
      *
      * @return bool
      */
@@ -254,21 +256,22 @@ class Sms {
         if (strncmp($number, '+44', 3) == 0)
             $this->fix($number, $msg);
         try {
-            $client = new \GuzzleHttp\Client();
+            $client   = new \GuzzleHttp\Client();
             $response = $client->request('POST', $this->endpoint, [
                 'query' => [
                     'username' => $this->username,
                     'password' => md5($this->password),
-                    'to' => $number,
-                    'from' => 'Veridu',
-                    'fast' => 1,
-                    'message' => $msg
+                    'to'       => $number,
+                    'from'     => 'Veridu',
+                    'fast'     => 1,
+                    'message'  => $msg
                 ]
             ]);
-            
+
             if ($response->getStatusCode() != 200) {
                 $this->log->alert('Failed to send sms to ' . $number . ': HTTP Status ' . $response->getStatusCode());
                 $this->lastError = 'Failed to contact SMS Gateway';
+
                 return false;
             }
             if ($this->checkResponse((string) $response->getBody()))
@@ -278,6 +281,7 @@ class Sms {
             $this->log->alert("Failed to send sms to {$number}: " . $e->getMessage());
             $this->lastError = 'Failed to contact SMS Gateway';
         }
+
         return false;
     }
 }
