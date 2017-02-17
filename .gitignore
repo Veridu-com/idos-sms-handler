@@ -3,6 +3,8 @@
 *.sublime-*
 .php_cs
 .vscode
+build/
+docs/
 composer.lock
 vendor/
 VeriduRuleset.xml
