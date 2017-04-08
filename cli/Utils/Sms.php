@@ -200,7 +200,7 @@ class Sms {
 
     /**
      * Return the last error message.
-     * 
+     *
      * @return string
      */
     public function lastError() {
@@ -231,6 +231,7 @@ class Sms {
 
                 return false;
             }
+
             if ($this->checkResponse($response->body))
                 return true;
             $this->log->alert("Failed to send sms to {$number}: " . $this->lastError());
@@ -257,7 +258,8 @@ class Sms {
             $this->fix($number, $msg);
         try {
             $client   = new \GuzzleHttp\Client();
-            $response = $client->request('POST', $this->endpoint, [
+            $response = $client->request(
+                'POST', $this->endpoint, [
                 'query' => [
                     'username' => $this->username,
                     'password' => md5($this->password),
@@ -266,7 +268,8 @@ class Sms {
                     'fast'     => 1,
                     'message'  => $msg
                 ]
-            ]);
+                ]
+            );
 
             if ($response->getStatusCode() != 200) {
                 $this->log->alert('Failed to send sms to ' . $number . ': HTTP Status ' . $response->getStatusCode());
@@ -274,6 +277,7 @@ class Sms {
 
                 return false;
             }
+
             if ($this->checkResponse((string) $response->getBody()))
                 return true;
             $this->log->alert("Failed to send sms to {$number}: " . $this->lastError());

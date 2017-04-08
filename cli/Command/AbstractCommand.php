@@ -30,6 +30,6 @@ abstract class AbstractCommand extends Command {
     public function __construct(array $config, string $name = null) {
         parent::__construct($name);
 
-        $this->config    = $config;
+        $this->config = $config;
     }
 }
