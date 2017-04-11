@@ -259,15 +259,17 @@ class Sms {
         try {
             $client   = new \GuzzleHttp\Client();
             $response = $client->request(
-                'POST', $this->endpoint, [
-                'query' => [
-                    'username' => $this->username,
-                    'password' => md5($this->password),
-                    'to'       => $number,
-                    'from'     => 'Veridu',
-                    'fast'     => 1,
-                    'message'  => $msg
-                ]
+                'POST',
+                $this->endpoint,
+                [
+                    'query' => [
+                        'username' => $this->username,
+                        'password' => md5($this->password),
+                        'to'       => $number,
+                        'from'     => 'Veridu',
+                        'fast'     => 1,
+                        'message'  => $msg
+                    ]
                 ]
             );
 
@@ -278,8 +280,10 @@ class Sms {
                 return false;
             }
 
-            if ($this->checkResponse((string) $response->getBody()))
+            if ($this->checkResponse((string) $response->getBody())) {
                 return true;
+            }
+
             $this->log->alert("Failed to send sms to {$number}: " . $this->lastError());
         } catch (\Exception $e) {
             $this->log->alert("Failed to send sms to {$number}: " . $e->getMessage());
